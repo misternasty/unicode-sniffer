@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicode Character Replacer</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .text-container, .dict-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .text-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        textarea {
+            width: 100%;
+            height: 250px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            resize: vertical;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.secondary:hover {
+            background-color: #0b7dda;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #d32f2f;
+        }
+        .dict-pairs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .dict-pair {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .dict-pair input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+            flex-grow: 1;
+        }
+        .dict-pair button {
+            padding: 8px;
+            min-width: 40px;
+        }
+        .char-info {
+            font-size: 14px;
+            color: #666;
+        }
+        .tab-container {
+            display: flex;
+            border-bottom: 1px solid #ccc;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+        }
+        .tab.active {
+            background-color: white;
+            border-bottom: 1px solid white;
+            margin-bottom: -1px;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px 0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .detected-chars {
+            margin-top: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .char-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .collapsible {
+            background-color: #f1f1f1;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .collapsible-content {
+            display: none;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        .preset-button {
+            margin-bottom: 5px;
+            background-color: #607d8b;
+        }
+        .preset-button:hover {
+            background-color: #455a64;
+        }
+        
+        /* Responsive styles */
+        @media (min-width: 768px) {
+            .container {
+                flex-direction: row;
+            }
+            .text-container {
+                flex: 2;
+            }
+            .dict-container {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Unicode Character Replacer</h1>
+    
+    <div class="container">
+        <div class="text-container">
+            <div class="tab-container">
+                <div class="tab active" data-tab="input">Input Text</div>
+                <div class="tab" data-tab="output">Output Text</div>
+                <div class="tab" data-tab="detected">Detected Characters</div>
+            </div>
+            
+            <div class="tab-content active" id="input-tab">
+                <div class="text-section">
+                    <label for="input-text">Paste your text here:</label>
+                    <textarea id="input-text" placeholder="Paste the chapter text here..."></textarea>
+                    <div class="button-group">
+                        <button id="process-button">Process Text</button>
+                        <button id="analyze-button" class="secondary">Analyze Only</button>
+                        <button id="clear-input-button" class="danger">Clear</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="output-tab">
+                <div class="text-section">
+                    <label for="output-text">Processed text:</label>
+                    <textarea id="output-text" readonly></textarea>
+                    <div class="button-group">
+                        <button id="copy-button">Copy to Clipboard</button>
+                        <button id="download-button" class="secondary">Download as TXT</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tab-content" id="detected-tab">
+                <h3>Characters Found in Text</h3>
+                <div id="char-stats"></div>
+                <div class="detected-chars" id="detected-chars">
+                    <p>Process or analyze text to see detected characters.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="dict-container">
+            <h2>Replacement Dictionary</h2>
+            
+            <div class="collapsible">Presets and Quick Tools</div>
+            <div class="collapsible-content">
+                <button class="preset-button" id="preset-quotes">Load Quotes Normalization</button>
+                <button class="preset-button" id="preset-spaces">Load Space Characters</button>
+                <button class="preset-button" id="preset-dashes">Load Dash/Hyphen Characters</button>
+                <button class="preset-button" id="preset-zero-width">Load Zero-Width Characters</button>
+                <hr>
+                <button class="secondary" id="add-from-detected">Add Characters from Detected</button>
+            </div>
+            
+            <div>
+                <label for="from-char">From Character:</label>
+                <input type="text" id="from-char" maxlength="2" placeholder="Char to replace">
+                <div class="char-info" id="from-char-info">Enter a character</div>
+            </div>
+            
+            <div>
+                <label for="to-char">To Character:</label>
+                <input type="text" id="to-char" maxlength="2" placeholder="Replacement char">
+                <div class="char-info" id="to-char-info">Enter a character</div>
+            </div>
+            
+            <div class="button-group" style="margin-top: 10px;">
+                <button id="add-pair-button">Add Pair</button>
+            </div>
+            
+            <h3>Current Replacements</h3>
+            <div class="dict-pairs" id="dict-pairs">
+                <!-- Replacement pairs will be added here -->
+            </div>
+            
+            <div class="button-group" style="margin-top: 20px;">
+                <button id="save-dict-button" class="secondary">Save Dictionary</button>
+                <button id="load-dict-button" class="secondary">Load Dictionary</button>
+                <button id="clear-dict-button" class="danger">Clear All</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // State variables
+            let replacementDict = {};
+            let detectedChars = {};
+            
+            // DOM Elements
+            const inputText = document.getElementById('input-text');
+            const outputText = document.getElementById('output-text');
+            const processButton = document.getElementById('process-button');
+            const analyzeButton = document.getElementById('analyze-button');
+            const clearInputButton = document.getElementById('clear-input-button');
+            const copyButton = document.getElementById('copy-button');
+            const downloadButton = document.getElementById('download-button');
+            const fromCharInput = document.getElementById('from-char');
+            const toCharInput = document.getElementById('to-char');
+            const fromCharInfo = document.getElementById('from-char-info');
+            const toCharInfo = document.getElementById('to-char-info');
+            const addPairButton = document.getElementById('add-pair-button');
+            const dictPairsDiv = document.getElementById('dict-pairs');
+            const saveDictButton = document.getElementById('save-dict-button');
+            const loadDictButton = document.getElementById('load-dict-button');
+            const clearDictButton = document.getElementById('clear-dict-button');
+            const detectedCharsDiv = document.getElementById('detected-chars');
+            const charStatsDiv = document.getElementById('char-stats');
+            const presetQuotesButton = document.getElementById('preset-quotes');
+            const presetSpacesButton = document.getElementById('preset-spaces');
+            const presetDashesButton = document.getElementById('preset-dashes');
+            const presetZeroWidthButton = document.getElementById('preset-zero-width');
+            const addFromDetectedButton = document.getElementById('add-from-detected');
+            
+            // Tab functionality
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs and content
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Show corresponding content
+                    const tabId = this.getAttribute('data-tab') + '-tab';
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Collapsible sections
+            const collapsibles = document.querySelectorAll('.collapsible');
+            collapsibles.forEach(coll => {
+                coll.addEventListener('click', function() {
+                    const content = this.nextElementSibling;
+                    if (content.style.display === 'block') {
+                        content.style.display = 'none';
+                    } else {
+                        content.style.display = 'block';
+                    }
+                });
+            });
+            
+            // Initialize from local storage if available
+            loadDictionaryFromStorage();
+            
+            // Character info display
+            fromCharInput.addEventListener('input', updateCharInfo);
+            toCharInput.addEventListener('input', updateCharInfo);
+            
+            function updateCharInfo() {
+                if (fromCharInput.value) {
+                    const char = fromCharInput.value.charAt(0);
+                    const code = char.codePointAt(0);
+                    fromCharInfo.textContent = `U+${code.toString(16).toUpperCase().padStart(4, '0')} (${getCharName(code)})`;
+                } else {
+                    fromCharInfo.textContent = 'Enter a character';
+                }
+                
+                if (toCharInput.value) {
+                    const char = toCharInput.value.charAt(0);
+                    const code = char.codePointAt(0);
+                    toCharInfo.textContent = `U+${code.toString(16).toUpperCase().padStart(4, '0')} (${getCharName(code)})`;
+                } else {
+                    toCharInfo.textContent = 'Enter a character';
+                }
+            }
+            
+            // Add replacement pair
+            addPairButton.addEventListener('click', function() {
+                if (fromCharInput.value && toCharInput.value) {
+                    const fromChar = fromCharInput.value.charAt(0);
+                    const toChar = toCharInput.value.charAt(0);
+                    
+                    addReplacementPair(fromChar, toChar);
+                    
+                    // Clear inputs
+                    fromCharInput.value = '';
+                    toCharInput.value = '';
+                    updateCharInfo();
+                }
+            });
+            
+            // Process text
+            processButton.addEventListener('click', function() {
+                if (inputText.value) {
+                    analyzeText();
+                    const processed = processText(inputText.value);
+                    outputText.value = processed;
+                    
+                    // Switch to output tab
+                    document.querySelector('.tab[data-tab="output"]').click();
+                }
+            });
+            
+            // Analyze only
+            analyzeButton.addEventListener('click', function() {
+                if (inputText.value) {
+                    analyzeText();
+                    
+                    // Switch to detected tab
+                    document.querySelector('.tab[data-tab="detected"]').click();
+                }
+            });
+            
+            // Clear input
+            clearInputButton.addEventListener('click', function() {
+                inputText.value = '';
+                outputText.value = '';
+                detectedChars = {};
+                updateDetectedCharsDisplay();
+            });
+            
+            // Copy to clipboard
+            copyButton.addEventListener('click', function() {
+                if (outputText.value) {
+                    outputText.select();
+                    document.execCommand('copy');
+                    
+                    // Show a temporary message
+                    const originalText = copyButton.textContent;
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.textContent = originalText;
+                    }, 2000);
+                }
+            });
+            
+            // Download as TXT
+            downloadButton.addEventListener('click', function() {
+                if (outputText.value) {
+                    const blob = new Blob([outputText.value], {type: 'text/plain'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'processed_text.txt';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }
+            });
+            
+            // Save dictionary
+            saveDictButton.addEventListener('click', function() {
+                localStorage.setItem('unicodeReplacerDict', JSON.stringify(replacementDict));
+                
+                // Show a temporary message
+                const originalText = saveDictButton.textContent;
+                saveDictButton.textContent = 'Saved!';
+                setTimeout(() => {
+                    saveDictButton.textContent = originalText;
+                }, 2000);
+            });
+            
+            // Load dictionary
+            loadDictButton.addEventListener('click', function() {
+                loadDictionaryFromStorage();
+            });
+            
+            // Clear dictionary
+            clearDictButton.addEventListener('click', function() {
+                if (confirm('Are you sure you want to clear all replacement pairs?')) {
+                    replacementDict = {};
+                    updateDictionaryDisplay();
+                }
+            });
+            
+            // Preset buttons
+            presetQuotesButton.addEventListener('click', loadQuotesPreset);
+            presetSpacesButton.addEventListener('click', loadSpacesPreset);
+            presetDashesButton.addEventListener('click', loadDashesPreset);
+            presetZeroWidthButton.addEventListener('click', loadZeroWidthPreset);
+            
+            // Add from detected
+            addFromDetectedButton.addEventListener('click', function() {
+                const dialog = document.createElement('dialog');
+                dialog.innerHTML = `
+                    <div style="min-width: 300px; padding: 10px;">
+                        <h3>Add Detected Characters</h3>
+                        <div id="detected-list" style="max-height: 300px; overflow-y: auto; margin: 10px 0;"></div>
+                        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                            <button id="cancel-detected">Cancel</button>
+                            <button id="add-selected-detected">Add Selected</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(dialog);
+                
+                const detectedList = dialog.querySelector('#detected-list');
+                const charEntries = Object.entries(detectedChars);
+                
+                if (charEntries.length === 0) {
+                    detectedList.innerHTML = '<p>No characters detected. Analyze text first.</p>';
+                } else {
+                    charEntries.forEach(([char, info]) => {
+                        const item = document.createElement('div');
+                        item.innerHTML = `
+                            <label style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <input type="checkbox" data-char="${char}">
+                                <span style="margin-left: 8px;">
+                                    "${char}" (U+${char.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')})
+                                </span>
+                                <input type="text" maxlength="1" placeholder="Replace with" style="margin-left: auto; width: 30px; text-align: center;">
+                            </label>
+                        `;
+                        detectedList.appendChild(item);
+                    });
+                }
+                
+                dialog.querySelector('#cancel-detected').addEventListener('click', () => {
+                    dialog.close();
+                    document.body.removeChild(dialog);
+                });
+                
+                dialog.querySelector('#add-selected-detected').addEventListener('click', () => {
+                    const checkboxes = dialog.querySelectorAll('input[type="checkbox"]:checked');
+                    checkboxes.forEach(cb => {
+                        const char = cb.getAttribute('data-char');
+                        const replacementInput = cb.parentElement.querySelector('input[type="text"]');
+                        if (replacementInput.value) {
+                            addReplacementPair(char, replacementInput.value);
+                        }
+                    });
+                    
+                    dialog.close();
+                    document.body.removeChild(dialog);
+                });
+                
+                dialog.showModal();
+            });
+            
+            // Helper functions
+            function addReplacementPair(fromChar, toChar) {
+                replacementDict[fromChar] = toChar;
+                updateDictionaryDisplay();
+            }
+            
+            function updateDictionaryDisplay() {
+                dictPairsDiv.innerHTML = '';
+                
+                Object.entries(replacementDict).forEach(([fromChar, toChar]) => {
+                    const fromCode = fromChar.codePointAt(0);
+                    const toCode = toChar.codePointAt(0);
+                    
+                    const pairDiv = document.createElement('div');
+                    pairDiv.className = 'dict-pair';
+                    pairDiv.innerHTML = `
+                        <div>
+                            <span style="font-size: 18px;">"${fromChar}"</span>
+                            <div class="char-info">U+${fromCode.toString(16).toUpperCase().padStart(4, '0')}</div>
+                        </div>
+                        <div>→</div>
+                        <div>
+                            <span style="font-size: 18px;">"${toChar}"</span>
+                            <div class="char-info">U+${toCode.toString(16).toUpperCase().padStart(4, '0')}</div>
+                        </div>
+                        <button class="danger" data-char="${fromChar}">×</button>
+                    `;
+                    
+                    const removeButton = pairDiv.querySelector('button');
+                    removeButton.addEventListener('click', function() {
+                        const charToRemove = this.getAttribute('data-char');
+                        delete replacementDict[charToRemove];
+                        updateDictionaryDisplay();
+                    });
+                    
+                    dictPairsDiv.appendChild(pairDiv);
+                });
+                
+                if (Object.keys(replacementDict).length === 0) {
+                    dictPairsDiv.innerHTML = '<p>No replacement pairs defined.</p>';
+                }
+            }
+            
+            function loadDictionaryFromStorage() {
+                const savedDict = localStorage.getItem('unicodeReplacerDict');
+                if (savedDict) {
+                    replacementDict = JSON.parse(savedDict);
+                    updateDictionaryDisplay();
+                }
+            }
+            
+            function processText(text) {
+                let processed = text;
+                
+                Object.entries(replacementDict).forEach(([fromChar, toChar]) => {
+                    // Use a global regex to replace all occurrences
+                    const regex = new RegExp(escapeRegExp(fromChar), 'g');
+                    processed = processed.replace(regex, toChar);
+                });
+                
+                return processed;
+            }
+            
+            function analyzeText() {
+                detectedChars = {};
+                const text = inputText.value;
+                
+                // Count character occurrences
+                for (let i = 0; i < text.length; i++) {
+                    const char = text.charAt(i);
+                    const code = char.codePointAt(0);
+                    
+                    // Skip basic ASCII printable characters except quotes (which might be ambiguous)
+                    if (code >= 32 && code <= 126 && code !== 34) continue;
+                    
+                    if (!detectedChars[char]) {
+                        detectedChars[char] = {
+                            count: 1,
+                            code: code,
+                            name: getCharName(code)
+                        };
+                    } else {
+                        detectedChars[char].count++;
+                    }
+                }
+                
+                updateDetectedCharsDisplay();
+            }
+            
+            function updateDetectedCharsDisplay() {
+                detectedCharsDiv.innerHTML = '';
+                
+                const charEntries = Object.entries(detectedChars);
+                
+                if (charEntries.length === 0) {
+                    detectedCharsDiv.innerHTML = '<p>No special characters detected.</p>';
+                    charStatsDiv.textContent = '';
+                    return;
+                }
+                
+                // Sort by count (descending)
+                charEntries.sort((a, b) => b[1].count - a[1].count);
+                
+                charStatsDiv.textContent = `Found ${charEntries.length} special character types.`;
+                
+                charEntries.forEach(([char, info]) => {
+                    const charItem = document.createElement('div');
+                    charItem.className = 'char-item';
+                    
+                    const hasReplacement = replacementDict.hasOwnProperty(char);
+                    const replacementInfo = hasReplacement ? 
+                        ` → "${replacementDict[char]}" (U+${replacementDict[char].codePointAt(0).toString(16).toUpperCase().padStart(4, '0')})` : '';
+                    
+                    charItem.innerHTML = `
+                        <div>
+                            <strong>"${char}"</strong> (U+${info.code.toString(16).toUpperCase().padStart(4, '0')})
+                            ${hasReplacement ? '<span style="color: green; margin-left: 5px;">✓</span>' : ''}
+                            ${replacementInfo}
+                        </div>
+                        <div>
+                            Count: ${info.count}
+                            <button class="secondary" style="margin-left: 10px; padding: 2px 5px;" data-char="${char}">Add</button>
+                        </div>
+                    `;
+                    
+                    const addButton = charItem.querySelector('button');
+                    addButton.addEventListener('click', function() {
+                        const char = this.getAttribute('data-char');
+                        fromCharInput.value = char;
+                        updateCharInfo();
+                        toCharInput.focus();
+                    });
+                    
+                    detectedCharsDiv.appendChild(charItem);
+                });
+            }
+            
+            function loadQuotesPreset() {
+                const quotesDict = {
+                    '\u201C': '\u0022', // Left double quotation mark → Quotation mark
+                    '\u201D': '\u0022', // Right double quotation mark → Quotation mark
+                    '\u2018': '\u0027', // Left single quotation mark → Apostrophe
+                    '\u2019': '\u0027', // Right single quotation mark → Apostrophe
+                };
+                
+                if (confirm('This will add quote character replacements. Continue?')) {
+                    Object.entries(quotesDict).forEach(([from, to]) => {
+                        replacementDict[from] = to;
+                    });
+                    updateDictionaryDisplay();
+                }
+            }
+            
+            function loadSpacesPreset() {
+                const spacesDict = {
+                    '\u00A0': '\u0020', // No-break space → Space
+                    '\u2002': '\u0020', // En space → Space
+                    '\u2003': '\u0020', // Em space → Space
+                    '\u2004': '\u0020', // Three-per-em space → Space
+                    '\u2005': '\u0020', // Four-per-em space → Space
+                    '\u2006': '\u0020', // Six-per-em space → Space
+                    '\u2007': '\u0020', // Figure space → Space
+                    '\u2008': '\u0020', // Punctuation space → Space
+                    '\u2009': '\u0020', // Thin space → Space
+                    '\u200A': '\u0020', // Hair space → Space
+                    '\u202F': '\u0020', // Narrow no-break space → Space
+                    '\u205F': '\u0020', // Medium mathematical space → Space
+                    '\u3000': '\u0020', // Ideographic space → Space
+                };
+                
+                if (confirm('This will add space character replacements. Continue?')) {
+                    Object.entries(spacesDict).forEach(([from, to]) => {
+                        replacementDict[from] = to;
+                    });
+                    updateDictionaryDisplay();
+                }
+            }
+            
+            function loadDashesPreset() {
+                const dashesDict = {
+                    '\u2012': '\u002D', // Figure dash → Hyphen-minus
+                    '\u2013': '\u002D', // En dash → Hyphen-minus
+                    '\u2014': '\u002D', // Em dash → Hyphen-minus
+                    '\u2015': '\u002D', // Horizontal bar → Hyphen-minus
+                    '\u2053': '\u007E', // Swung dash → Tilde
+                };
+                
+                if (confirm('This will add dash/hyphen character replacements. Continue?')) {
+                    Object.entries(dashesDict).forEach(([from, to]) => {
+                        replacementDict[from] = to;
+                    });
+                    updateDictionaryDisplay();
+                }
+            }
+            
+            function loadZeroWidthPreset() {
+                const zwDict = {
+                    '\u200B': '', // Zero width space → (nothing)
+                    '\u200C': '', // Zero width non-joiner → (nothing)
+                    '\u200D': '', // Zero width joiner → (nothing)
+                    '\u2060': '', // Word joiner → (nothing)
+                    '\uFEFF': '', // Zero width no-break space → (nothing)
+                };
+                
+                if (confirm('This will add zero-width character replacements. Continue?')) {
+                    Object.entries(zwDict).forEach(([from, to]) => {
+                        replacementDict[from] = to;
+                    });
+                    updateDictionaryDisplay();
+                }
+            }
+            
+            // Utility functions
+            function escapeRegExp(string) {
+                return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            }
+            
+            function getCharName(code) {
+                // This is a simplified version - ideally would use a Unicode database
+                if (code === 0x0020) return 'SPACE';
+                if (code === 0x0022) return 'QUOTATION MARK';
+                if (code === 0x0027) return 'APOSTROPHE';
+                if (code === 0x002D) return 'HYPHEN-MINUS';
+                if (code === 0x00A0) return 'NO-BREAK SPACE';
+                if (code === 0x200B) return 'ZERO WIDTH SPACE';
+                if (code === 0x200C) return 'ZERO WIDTH NON-JOINER';
+                if (code === 0x200D) return 'ZERO WIDTH JOINER';
+                if (code === 0x2018) return 'LEFT SINGLE QUOTATION MARK';
+                if (code === 0x2019) return 'RIGHT SINGLE QUOTATION MARK';
+                if (code === 0x201C) return 'LEFT DOUBLE QUOTATION MARK';
+                if (code === 0x201D) return 'RIGHT DOUBLE QUOTATION MARK';
+                if (code === 0x2060) return 'WORD JOINER';
+                if (code === 0xFEFF) return 'ZERO WIDTH NO-BREAK SPACE';
+                return 'UNKNOWN';
+            }
+        });
+    </script>
+</body>
+</html>
