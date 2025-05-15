@@ -1,6 +1,8 @@
 ## Unicode Character Replacer
 A lightweight, portable browser tool for detecting and replacing problematic Unicode characters in text.
 
+(/img.png)
+
 ### Overview
 Unicode Character Replacer helps writers, editors, and developers identify and normalize problematic Unicode characters that often sneak into text - such as zero-width spaces, various quote styles, and non-standard whitespace characters.
 
