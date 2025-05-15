@@ -1,8 +1,7 @@
 ## Unicode Character Replacer
 A lightweight, portable browser tool for detecting and replacing problematic Unicode characters in text.
 
-![alt text][sauce]
-[sauce]: https://github.com/misternasty/unicode-sniffer/img.png "idk"
+![sauce](img.png)
 
 ### Overview
 Unicode Character Replacer helps writers, editors, and developers identify and normalize problematic Unicode characters that often sneak into text - such as zero-width spaces, various quote styles, and non-standard whitespace characters.
